@@ -97,10 +97,10 @@ function Index() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         SBJIT · Study material
       </p>
-      <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">SBJIT Drive</h1>
+      <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">PaperLeak</h1>
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-        Every question paper, syllabus and note from the college Drive, organised by branch.
-        Pick a folder to go deeper — files open or download in one tap.
+        Every question paper, syllabus and note from the college Drive, organised by department.
+        Pick a folder to go deeper, or hit "All papers" on a department to see everything in it.
       </p>
 
       <div className="mt-8 flex flex-wrap items-center gap-2 text-sm">
