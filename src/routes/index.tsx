@@ -93,7 +93,8 @@ function Index() {
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
+    <div className="flex min-h-screen flex-col">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-12 sm:px-8 sm:py-16">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         SBJIT · Study material
       </p>
@@ -128,7 +129,38 @@ function Index() {
         className="mt-6 w-full rounded-full border border-border bg-card px-5 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-ring/40"
       />
 
-      {isPending && (
+      {allOf && (
+        <section className="mt-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide">
+              All papers · {allOf.name}
+            </h2>
+            <button
+              onClick={() => setAllOf(null)}
+              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold transition hover:border-accent"
+            >
+              Back to browsing
+            </button>
+          </div>
+          {allQuery.isPending && (
+            <div className="mt-4 space-y-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
+              ))}
+            </div>
+          )}
+          {allQuery.error && (
+            <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              Couldn't load the papers. Please try again.
+            </p>
+          )}
+          {allQuery.data && (
+            <AllPapersList files={allQuery.data.files} search={search} />
+          )}
+        </section>
+      )}
+
+      {!allOf && isPending && (
         <div className="mt-10 space-y-3">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
@@ -136,7 +168,7 @@ function Index() {
         </div>
       )}
 
-      {error && (
+      {!allOf && error && (
         <p className="mt-10 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           Couldn't load this folder. Please refresh and try again.
         </p>
