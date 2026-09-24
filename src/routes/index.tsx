@@ -174,7 +174,7 @@ function Index() {
         </p>
       )}
 
-      {!isPending && !error && (
+      {!allOf && !isPending && !error && (
         <div className="mt-10 space-y-10">
           {folders.length > 0 && (
             <section>
