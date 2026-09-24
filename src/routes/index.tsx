@@ -186,13 +186,24 @@ function Index() {
               </h2>
               <div className="mt-4 flex flex-wrap gap-2.5">
                 {folders.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => open(f)}
-                    className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm transition hover:border-accent hover:shadow"
-                  >
-                    {titleCase(f.name)}
-                  </button>
+                  <span key={f.id} className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => open(f)}
+                      className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm transition hover:border-accent hover:shadow"
+                    >
+                      {titleCase(f.name)}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSearch("");
+                        setAllOf({ id: f.id, name: titleCase(f.name) });
+                      }}
+                      title={`List all papers in ${titleCase(f.name)}`}
+                      className="rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                    >
+                      All papers
+                    </button>
+                  </span>
                 ))}
               </div>
             </section>
