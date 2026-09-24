@@ -89,6 +89,7 @@ function Index() {
 
   const open = (item: DriveItem) => {
     setSearch("");
+    setAllOf(null);
     setPath((p) => [...p, { id: item.id, name: titleCase(item.name) }]);
   };
 
@@ -258,5 +259,58 @@ function Index() {
         </div>
       )}
     </main>
+    <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+      PaperLeaks by CSE-DS
+    </footer>
+    </div>
+  );
+}
+
+function AllPapersList({ files, search }: { files: (DriveItem & { path: string })[]; search: string }) {
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? files.filter((f) => f.name.toLowerCase().includes(q) || f.path.toLowerCase().includes(q))
+    : files;
+  if (filtered.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-muted-foreground">
+        {q ? "No papers match your search." : "No papers found here yet."}
+      </p>
+    );
+  }
+  return (
+    <>
+      <p className="mt-2 text-xs text-muted-foreground">{filtered.length} papers</p>
+      <ul className="mt-3 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+        {filtered.map((f) => (
+          <li key={f.id} className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-secondary">
+            <span className="rounded-md bg-secondary px-2 py-1 text-[10px] font-bold tracking-wide text-muted-foreground">
+              {fileIcon(f.mimeType)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{f.name}</span>
+              {f.path && <span className="block truncate text-xs text-muted-foreground">{f.path}</span>}
+            </span>
+            {prettySize(f.size) && (
+              <span className="text-xs text-muted-foreground">{prettySize(f.size)}</span>
+            )}
+            <a
+              href={f.webViewLink ?? `https://drive.google.com/file/d/${f.id}/view`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition hover:border-accent"
+            >
+              View
+            </a>
+            <a
+              href={`https://drive.google.com/uc?export=download&id=${f.id}`}
+              className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+            >
+              Download
+            </a>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
