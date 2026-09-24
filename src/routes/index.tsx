@@ -2,22 +2,22 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { listFolder, ROOT_FOLDER_ID, type DriveItem } from "@/lib/drive.functions";
+import { listFolder, listAllFiles, ROOT_FOLDER_ID, type DriveItem } from "@/lib/drive.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SBJIT Drive — Question Papers, Notes & Syllabus" },
+      { title: "PaperLeak — Question Papers, Notes & Syllabus" },
       {
         name: "description",
         content:
-          "Browse SBJIT study material by branch: question papers, syllabus, notes and e-books, straight from the college Drive.",
+          "Browse question papers, syllabus, notes and e-books by department, straight from the college Drive.",
       },
-      { property: "og:title", content: "SBJIT Drive — Question Papers & Notes" },
+      { property: "og:title", content: "PaperLeak — Question Papers & Notes" },
       {
         property: "og:description",
         content:
-          "Browse SBJIT study material by branch: question papers, syllabus, notes and e-books.",
+          "Browse question papers, syllabus, notes and e-books by department.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
