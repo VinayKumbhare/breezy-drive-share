@@ -57,14 +57,24 @@ function titleCase(name: string) {
 
 function Index() {
   const [path, setPath] = useState<Crumb[]>([{ id: ROOT_FOLDER_ID, name: "All material" }]);
+  const [allOf, setAllOf] = useState<Crumb | null>(null);
   const [search, setSearch] = useState("");
   const current = path[path.length - 1]!;
   const fetchFolder = useServerFn(listFolder);
+  const fetchAll = useServerFn(listAllFiles);
 
   const { data, isPending, error } = useQuery({
     queryKey: ["drive", current.id],
     queryFn: () => fetchFolder({ data: { folderId: current.id } }),
     staleTime: 5 * 60 * 1000,
+    enabled: !allOf,
+  });
+
+  const allQuery = useQuery({
+    queryKey: ["drive-all", allOf?.id],
+    queryFn: () => fetchAll({ data: { folderId: allOf!.id } }),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!allOf,
   });
 
   const items = data?.items ?? [];
