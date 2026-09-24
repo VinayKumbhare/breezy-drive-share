@@ -1,24 +1,209 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useMemo, useState } from "react";
+import { listFolder, ROOT_FOLDER_ID, type DriveItem } from "@/lib/drive.functions";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "SBJIT Drive — Question Papers, Notes & Syllabus" },
+      {
+        name: "description",
+        content:
+          "Browse SBJIT study material by branch: question papers, syllabus, notes and e-books, straight from the college Drive.",
+      },
+      { property: "og:title", content: "SBJIT Drive — Question Papers & Notes" },
+      {
+        property: "og:description",
+        content:
+          "Browse SBJIT study material by branch: question papers, syllabus, notes and e-books.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+type Crumb = { id: string; name: string };
+
+function fileIcon(mimeType: string) {
+  if (mimeType.includes("pdf")) return "PDF";
+  if (mimeType.includes("image")) return "IMG";
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return "XLS";
+  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return "PPT";
+  if (mimeType.includes("word") || mimeType.includes("document")) return "DOC";
+  return "FILE";
+}
+
+function prettySize(size?: string) {
+  if (!size) return null;
+  const n = Number(size);
+  if (!Number.isFinite(n)) return null;
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function titleCase(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (c) => c.toUpperCase())
+    .replace(/\bCae\b/, "CAE")
+    .replace(/\bEse\b/, "ESE")
+    .replace(/\bQp\b/, "QP");
+}
+
 function Index() {
+  const [path, setPath] = useState<Crumb[]>([{ id: ROOT_FOLDER_ID, name: "All material" }]);
+  const [search, setSearch] = useState("");
+  const current = path[path.length - 1]!;
+  const fetchFolder = useServerFn(listFolder);
+
+  const { data, isPending, error } = useQuery({
+    queryKey: ["drive", current.id],
+    queryFn: () => fetchFolder({ data: { folderId: current.id } }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const items = data?.items ?? [];
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((i: DriveItem) => i.name.toLowerCase().includes(q));
+  }, [items, search]);
+
+  const folders = filtered.filter((i) => i.isFolder);
+  const files = filtered.filter((i) => !i.isFolder);
+
+  const open = (item: DriveItem) => {
+    setSearch("");
+    setPath((p) => [...p, { id: item.id, name: titleCase(item.name) }]);
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
+    <main className="mx-auto min-h-screen w-full max-w-5xl px-5 py-12 sm:px-8 sm:py-16">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        SBJIT · Study material
+      </p>
+      <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">SBJIT Drive</h1>
+      <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
+        Every question paper, syllabus and note from the college Drive, organised by branch.
+        Pick a folder to go deeper — files open or download in one tap.
+      </p>
+
+      <div className="mt-8 flex flex-wrap items-center gap-2 text-sm">
+        {path.map((c, i) => (
+          <span key={c.id} className="flex items-center gap-2">
+            {i > 0 && <span className="text-muted-foreground">/</span>}
+            <button
+              onClick={() => setPath((p) => p.slice(0, i + 1))}
+              className={
+                i === path.length - 1
+                  ? "font-semibold text-foreground"
+                  : "text-muted-foreground transition-colors hover:text-foreground"
+              }
+            >
+              {c.name}
+            </button>
+          </span>
+        ))}
+      </div>
+
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search in this folder…"
+        className="mt-6 w-full rounded-full border border-border bg-card px-5 py-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-ring/40"
       />
-    </div>
+
+      {isPending && (
+        <div className="mt-10 space-y-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <p className="mt-10 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          Couldn't load this folder. Please refresh and try again.
+        </p>
+      )}
+
+      {!isPending && !error && (
+        <div className="mt-10 space-y-10">
+          {folders.length > 0 && (
+            <section>
+              <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
+                <span className="grid size-5 place-items-center rounded-full bg-accent text-[11px] text-accent-foreground">
+                  {folders.length}
+                </span>
+                Folders
+              </h2>
+              <div className="mt-4 flex flex-wrap gap-2.5">
+                {folders.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => open(f)}
+                    className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm transition hover:border-accent hover:shadow"
+                  >
+                    {titleCase(f.name)}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {files.length > 0 && (
+            <section>
+              <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide">
+                <span className="grid size-5 place-items-center rounded-full bg-accent text-[11px] text-accent-foreground">
+                  {files.length}
+                </span>
+                Files
+              </h2>
+              <ul className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+                {files.map((f) => (
+                  <li
+                    key={f.id}
+                    className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-secondary"
+                  >
+                    <span className="rounded-md bg-secondary px-2 py-1 text-[10px] font-bold tracking-wide text-muted-foreground">
+                      {fileIcon(f.mimeType)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{f.name}</span>
+                    {prettySize(f.size) && (
+                      <span className="text-xs text-muted-foreground">{prettySize(f.size)}</span>
+                    )}
+                    <a
+                      href={f.webViewLink ?? `https://drive.google.com/file/d/${f.id}/view`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition hover:border-accent"
+                    >
+                      View
+                    </a>
+                    <a
+                      href={`https://drive.google.com/uc?export=download&id=${f.id}`}
+                      className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                    >
+                      Download
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {folders.length === 0 && files.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              {search ? "Nothing matches your search here." : "This folder is empty."}
+            </p>
+          )}
+        </div>
+      )}
+    </main>
   );
 }
