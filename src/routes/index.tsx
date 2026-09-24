@@ -110,7 +110,10 @@ function Index() {
           <span key={c.id} className="flex items-center gap-2">
             {i > 0 && <span className="text-muted-foreground">/</span>}
             <button
-              onClick={() => setPath((p) => p.slice(0, i + 1))}
+              onClick={() => {
+                setAllOf(null);
+                setPath((p) => p.slice(0, i + 1));
+              }}
               className={
                 i === path.length - 1
                   ? "font-semibold text-foreground"
