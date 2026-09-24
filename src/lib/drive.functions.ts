@@ -48,6 +48,38 @@ function toItem(f: any): DriveItem {
   };
 }
 
+export const listAllFiles = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) =>
+    z.object({ folderId: z.string().default(ROOT_FOLDER_ID) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const files: (DriveItem & { path: string })[] = [];
+    const queue: { id: string; path: string }[] = [{ id: data.folderId, path: "" }];
+    while (queue.length > 0 && files.length < 500) {
+      const { id, path } = queue.shift()!;
+      let pageToken: string | undefined;
+      do {
+        const params: Record<string, string> = {
+          q: `'${id}' in parents and trashed=false`,
+          fields: "nextPageToken, files(id,name,mimeType,size,modifiedTime,webViewLink)",
+          pageSize: "200",
+          orderBy: "folder,name",
+          supportsAllDrives: "true",
+          includeItemsFromAllDrives: "true",
+        };
+        if (pageToken) params["pageToken"] = pageToken;
+        const json: any = await driveFetch("/files", params);
+        for (const f of json.files ?? []) {
+          const item = toItem(f);
+          if (item.isFolder) queue.push({ id: item.id, path: path ? `${path} / ${item.name}` : item.name });
+          else files.push({ ...item, path });
+        }
+        pageToken = json.nextPageToken;
+      } while (pageToken);
+    }
+    return { folderId: data.folderId, files };
+  });
+
 export const listFolder = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) =>
     z.object({ folderId: z.string().default(ROOT_FOLDER_ID) }).parse(data),
