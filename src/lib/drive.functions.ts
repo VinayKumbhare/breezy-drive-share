@@ -13,21 +13,35 @@ export type DriveItem = {
   webViewLink?: string;
 };
 
+const GOOGLE_API = "https://www.googleapis.com/drive/v3";
 const GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
 
 async function driveFetch(path: string, params: Record<string, string>) {
+  const googleKey = process.env["GOOGLE_API_KEY"];
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connKey = process.env["GOOGLE_DRIVE_API_KEY"];
-  if (!lovableKey || !connKey) {
-    throw new Error("Google Drive connection is not configured for this project.");
-  }
-  const url = `${GATEWAY}${path}?${new URLSearchParams(params).toString()}`;
-  const res = await fetch(url, {
-    headers: {
+
+  let url: string;
+  let headers: Record<string, string> = {};
+
+  if (googleKey) {
+    // Direct Google Drive API (Vercel / self-hosted). The Drive folder must be
+    // shared as "Anyone with the link can view" for API-key access to work.
+    url = `${GOOGLE_API}${path}?${new URLSearchParams({ ...params, key: googleKey }).toString()}`;
+  } else if (lovableKey && connKey) {
+    // Fallback: Lovable connector gateway (used inside Lovable hosting).
+    url = `${GATEWAY}${path}?${new URLSearchParams(params).toString()}`;
+    headers = {
       Authorization: `Bearer ${lovableKey}`,
       "X-Connection-Api-Key": connKey,
-    },
-  });
+    };
+  } else {
+    throw new Error(
+      "Google Drive is not configured: set GOOGLE_API_KEY (direct Google Drive API key).",
+    );
+  }
+
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     const body = await res.text();
     console.error(`Drive request failed [${res.status}]: ${body}`);
