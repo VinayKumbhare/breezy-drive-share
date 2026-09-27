@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import crypto from "node:crypto";
 
 export const ROOT_FOLDER_ID = "1dpTPs9OMHEtkrJBrYiJzic8ukzknxG5Y";
 
@@ -16,18 +17,82 @@ export type DriveItem = {
 const GOOGLE_API = "https://www.googleapis.com/drive/v3";
 const GATEWAY = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
 
+// ---------- Service Account OAuth2 (primary path for Vercel) ----------
+
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+async function getServiceAccountToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.token;
+
+  const clientEmail = process.env["GOOGLE_SERVICE_ACCOUNT_EMAIL"];
+  const privateKeyRaw = process.env["GOOGLE_PRIVATE_KEY"];
+  if (!clientEmail || !privateKeyRaw) {
+    throw new Error(
+      "Google Drive is not configured: set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY (Vercel) or rely on the Lovable connector gateway.",
+    );
+  }
+
+  // Private keys pasted into env vars often contain literal "\n" escapes.
+  const privateKey = privateKeyRaw.replace(/\\n/g, "\n");
+
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const claims = {
+    iss: clientEmail,
+    scope: "https://www.googleapis.com/auth/drive.readonly",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: now + 3600,
+    iat: now,
+  };
+
+  const enc = (obj: object) => Buffer.from(JSON.stringify(obj)).toString("base64url");
+  const unsigned = `${enc(header)}.${enc(claims)}`;
+  const signature = crypto
+    .createSign("RSA-SHA256")
+    .update(unsigned)
+    .sign(privateKey)
+    .toString("base64url");
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: `${unsigned}.${signature}`,
+    }).toString(),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Service account token request failed [${res.status}]: ${body}`);
+    throw new Error(`Service account token request failed [${res.status}]: ${body}`);
+  }
+
+  const json: any = await res.json();
+  cachedToken = {
+    token: json.access_token,
+    expiresAt: Date.now() + (json.expires_in - 60) * 1000,
+  };
+  return cachedToken.token;
+}
+
+// ---------- Drive fetch ----------
+
 async function driveFetch(path: string, params: Record<string, string>) {
-  const googleKey = process.env["GOOGLE_API_KEY"];
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connKey = process.env["GOOGLE_DRIVE_API_KEY"];
 
   let url: string;
   let headers: Record<string, string> = {};
 
-  if (googleKey) {
-    // Direct Google Drive API (Vercel / self-hosted). The Drive folder must be
-    // shared as "Anyone with the link can view" for API-key access to work.
-    url = `${GOOGLE_API}${path}?${new URLSearchParams({ ...params, key: googleKey }).toString()}`;
+  const useServiceAccount =
+    !!process.env["GOOGLE_SERVICE_ACCOUNT_EMAIL"] && !!process.env["GOOGLE_PRIVATE_KEY"];
+
+  if (useServiceAccount) {
+    // Primary: Google Drive API with a service account (works on Vercel).
+    const token = await getServiceAccountToken();
+    url = `${GOOGLE_API}${path}?${new URLSearchParams(params).toString()}`;
+    headers = { Authorization: `Bearer ${token}` };
   } else if (lovableKey && connKey) {
     // Fallback: Lovable connector gateway (used inside Lovable hosting).
     url = `${GATEWAY}${path}?${new URLSearchParams(params).toString()}`;
@@ -37,7 +102,7 @@ async function driveFetch(path: string, params: Record<string, string>) {
     };
   } else {
     throw new Error(
-      "Google Drive is not configured: set GOOGLE_API_KEY (direct Google Drive API key).",
+      "Google Drive is not configured: set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY.",
     );
   }
 
