@@ -263,7 +263,11 @@ function Index() {
       )}
     </main>
     <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-      PaperLeaks by CSE-DS
+      <p>PaperLeaks by CSE-DS</p>
+      <p className="mt-1">
+        Created by{" "}
+        <span className="font-semibold text-foreground">Vinay</span>
+      </p>
     </footer>
     </div>
   );
