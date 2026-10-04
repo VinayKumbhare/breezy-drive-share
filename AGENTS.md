@@ -8,5 +8,3 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
-
-- Use the shared Button component for primary, outline, and compact actions so the neo-brutalist interaction styling stays consistent.
