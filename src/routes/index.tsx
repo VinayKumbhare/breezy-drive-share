@@ -63,7 +63,7 @@ function Index() {
 
   const allQuery = useQuery({
     queryKey: ["drive-all", allOf?.id],
-    queryFn: () => allOf ? fetchAll({ data: { folderId: allOf.id } }) : Promise.resolve({ files: [] }),
+    queryFn: () => fetchAll({ data: { folderId: allOf?.id ?? ROOT_FOLDER_ID } }),
     staleTime: 5 * 60 * 1000,
     enabled: Boolean(allOf),
   });
