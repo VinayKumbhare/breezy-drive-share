@@ -87,9 +87,12 @@ function Index() {
   return (
     <div className="flex min-h-screen flex-col">
     <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-12 sm:px-8 sm:py-16">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        SBJIT · Study material
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          SBJIT · Study material
+        </p>
+        <AuthButton />
+      </div>
       <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">PaperLeak</h1>
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
         Every question paper, syllabus and note from the college Drive, organised by department.
