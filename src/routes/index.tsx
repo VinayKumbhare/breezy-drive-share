@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { listFolder, ROOT_FOLDER_ID, type DriveItem } from "@/lib/drive.functions";
 
 export const Route = createFileRoute("/")({
@@ -55,6 +57,57 @@ function titleCase(name: string) {
     .replace(/\bQp\b/, "QP");
 }
 
+function AuthButton() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/", replace: true });
+  };
+
+  if (!user) {
+    return (
+      <Link
+        to="/auth"
+        className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+      >
+        Sign in
+      </Link>
+    );
+  }
+
+  const name =
+    (user.user_metadata?.["full_name"] as string | undefined) ?? user.email ?? "Account";
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden max-w-40 truncate text-xs font-medium text-muted-foreground sm:inline">
+        {name}
+      </span>
+      <button
+        onClick={signOut}
+        className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold transition hover:border-accent"
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
 function Index() {
   const [path, setPath] = useState<Crumb[]>([{ id: ROOT_FOLDER_ID, name: "All material" }]);
   const [search, setSearch] = useState("");
@@ -85,9 +138,12 @@ function Index() {
   return (
     <div className="flex min-h-screen flex-col">
     <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-12 sm:px-8 sm:py-16">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        SBJIT · Study material
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          SBJIT · Study material
+        </p>
+        <AuthButton />
+      </div>
       <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">PaperLeak</h1>
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
         Every question paper, syllabus and note from the college Drive, organised by department.
