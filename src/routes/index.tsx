@@ -91,7 +91,7 @@ function AuthButton() {
   }
 
   const name =
-    (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "Account";
+    (user.user_metadata?.["full_name"] as string | undefined) ?? user.email ?? "Account";
 
   return (
     <div className="flex items-center gap-2">
