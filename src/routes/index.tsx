@@ -57,6 +57,57 @@ function titleCase(name: string) {
     .replace(/\bQp\b/, "QP");
 }
 
+function AuthButton() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/", replace: true });
+  };
+
+  if (!user) {
+    return (
+      <Link
+        to="/auth"
+        className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+      >
+        Sign in
+      </Link>
+    );
+  }
+
+  const name =
+    (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "Account";
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden max-w-40 truncate text-xs font-medium text-muted-foreground sm:inline">
+        {name}
+      </span>
+      <button
+        onClick={signOut}
+        className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold transition hover:border-accent"
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
 function Index() {
   const [path, setPath] = useState<Crumb[]>([{ id: ROOT_FOLDER_ID, name: "All material" }]);
   const [search, setSearch] = useState("");
