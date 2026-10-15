@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { listFolder, ROOT_FOLDER_ID, type DriveItem } from "@/lib/drive.functions";
+import { useStars, useToggleStar } from "@/lib/stars";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -287,6 +288,11 @@ function Index() {
                     key={f.id}
                     className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-secondary"
                   >
+                    <StarButton
+                      starred={starredIds.has(f.id)}
+                      busy={toggle.isPending}
+                      onClick={() => toggle.mutate({ item: f, starred: starredIds.has(f.id), folderPath })}
+                    />
                     <span className="rounded-md bg-secondary px-2 py-1 text-[10px] font-bold tracking-wide text-muted-foreground">
                       {fileIcon(f.mimeType)}
                     </span>
@@ -321,6 +327,7 @@ function Index() {
           )}
         </div>
       )}
+      </>)}
     </main>
     <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
       <p>PaperLeaks by CSE-DS</p>
