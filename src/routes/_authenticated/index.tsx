@@ -99,11 +99,34 @@ function AuthButton() {
   );
 }
 
+function StarButton({ starred, onClick, busy }: { starred: boolean; onClick: () => void; busy?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      aria-label={starred ? "Remove from Exam Bag" : "Add to Exam Bag"}
+      title={starred ? "Remove from Exam Bag" : "Add to Exam Bag"}
+      className={`grid size-8 place-items-center rounded-full border transition disabled:opacity-50 ${
+        starred ? "border-accent bg-accent text-accent-foreground" : "border-border text-muted-foreground hover:border-accent hover:text-foreground"
+      }`}
+    >
+      <svg viewBox="0 0 24 24" className="size-4" fill={starred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path strokeLinejoin="round" d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" />
+      </svg>
+    </button>
+  );
+}
+
 function Index() {
   const [path, setPath] = useState<Crumb[]>([{ id: ROOT_FOLDER_ID, name: "All material" }]);
   const [search, setSearch] = useState("");
+  const [showBag, setShowBag] = useState(false);
   const current = path[path.length - 1]!;
   const fetchFolder = useServerFn(listFolder);
+  const stars = useStars();
+  const toggle = useToggleStar();
+  const starredIds = useMemo(() => new Set((stars.data ?? []).map((s) => s.file_id)), [stars.data]);
+  const folderPath = path.slice(1).map((c) => c.name).join(" / ");
 
   const { data, isPending, error } = useQuery({
     queryKey: ["drive", current.id],
@@ -123,8 +146,11 @@ function Index() {
 
   const open = (item: DriveItem) => {
     setSearch("");
+    setShowBag(false);
     setPath((p) => [...p, { id: item.id, name: titleCase(item.name) }]);
   };
+
+  const bag = stars.data ?? [];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -133,7 +159,17 @@ function Index() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           SBJIT · Study material
         </p>
-        <AuthButton />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowBag((v) => !v)}
+            className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+              showBag ? "border-accent bg-accent text-accent-foreground" : "border-border bg-card hover:border-accent"
+            }`}
+          >
+            ★ My Exam Bag ({bag.length})
+          </button>
+          <AuthButton />
+        </div>
       </div>
       <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">PaperLeak</h1>
       <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
@@ -141,6 +177,39 @@ function Index() {
         Pick a folder to go deeper.
       </p>
 
+      {showBag ? (
+        <section className="mt-10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-wide">My Exam Bag</h2>
+            <button onClick={() => setShowBag(false)} className="text-xs font-semibold text-muted-foreground hover:text-foreground">
+              Back to browsing
+            </button>
+          </div>
+          {bag.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Your bag is empty. Tap the star next to any paper to save it here — it follows you on every device.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+              {bag.map((s) => (
+                <li key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <StarButton
+                    starred
+                    busy={toggle.isPending}
+                    onClick={() => toggle.mutate({ item: { id: s.file_id, name: s.name, mimeType: s.mime_type }, starred: true })}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{s.name}</p>
+                    {s.folder_path && <p className="truncate text-xs text-muted-foreground">{s.folder_path}</p>}
+                  </div>
+                  <a href={s.web_view_link ?? `https://drive.google.com/file/d/${s.file_id}/view`} target="_blank" rel="noreferrer" className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition hover:border-accent">View</a>
+                  <a href={`https://drive.google.com/uc?export=download&id=${s.file_id}`} className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90">Download</a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : (<>
       <div className="mt-8 flex flex-wrap items-center gap-2 text-sm">
         {path.map((c, i) => (
           <span key={c.id} className="flex items-center gap-2">
