@@ -38,6 +38,42 @@ export type Database = {
         }
         Relationships: []
       }
+      starred_papers: {
+        Row: {
+          created_at: string
+          file_id: string
+          folder_path: string | null
+          id: string
+          mime_type: string
+          name: string
+          size: string | null
+          user_id: string
+          web_view_link: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_id: string
+          folder_path?: string | null
+          id?: string
+          mime_type?: string
+          name: string
+          size?: string | null
+          user_id: string
+          web_view_link?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_id?: string
+          folder_path?: string | null
+          id?: string
+          mime_type?: string
+          name?: string
+          size?: string | null
+          user_id?: string
+          web_view_link?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

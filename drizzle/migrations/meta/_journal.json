@@ -8,6 +8,13 @@
       "when": 1791957410671,
       "tag": "0000_create_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792080269874,
+      "tag": "0001_create_starred_papers",
+      "breakpoints": true
     }
   ]
 }
