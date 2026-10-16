@@ -2,8 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    next: oauthReturnPath(search["next"]),
+  }),
   head: () => ({
     meta: [
       { title: "Sign in — PaperLeak" },
@@ -37,6 +41,7 @@ const BRANCHES = [
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,7 +62,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: new URL(next, window.location.origin).href,
             data: { full_name: fullName, branch },
           },
         });
@@ -66,12 +71,12 @@ function AuthPage() {
           setMessage("Check your email to confirm your account, then sign in.");
           setMode("signin");
         } else {
-          navigate({ to: "/" });
+          navigate({ to: next });
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: "/" });
+        navigate({ to: next });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -84,7 +89,7 @@ function AuthPage() {
     setBusy(true);
     setError(null);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: new URL(next, window.location.origin).href,
     });
     if (result.error) {
       setError("Google sign-in failed. Please try again.");
@@ -92,7 +97,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/" });
+    navigate({ to: next });
   };
 
   return (
