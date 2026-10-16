@@ -5,9 +5,10 @@ import { lovable } from "@/integrations/lovable";
 import { oauthReturnPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    next: oauthReturnPath(search["next"]),
-  }),
+  validateSearch: (search: Record<string, unknown>): { next?: string } => {
+    const next = oauthReturnPath(search["next"]);
+    return next === "/" ? {} : { next };
+  },
   head: () => ({
     meta: [
       { title: "Sign in — PaperLeak" },
@@ -41,7 +42,7 @@ const BRANCHES = [
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { next } = Route.useSearch();
+  const { next = "/" } = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
