@@ -6,6 +6,8 @@ import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { listFolder, ROOT_FOLDER_ID, type DriveItem } from "@/lib/drive.functions";
 import { useStars, useToggleStar } from "@/lib/stars";
+import { useWebMCP } from "use-webmcp-tool";
+import { runWebMCPTool } from "@/lib/webmcp-telemetry";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -152,6 +154,88 @@ function Index() {
   };
 
   const bag = stars.data ?? [];
+
+  useWebMCP({
+    name: "list_current_folder",
+    description: "List the folders and files currently shown on screen in PaperLeak, respecting the active search filter.",
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: () =>
+      runWebMCPTool("list_current_folder", () => {
+        if (isPending) return "Still loading this folder — try again in a moment.";
+        if (filtered.length === 0) return "Nothing is shown in this folder.";
+        return filtered
+          .map((i) => `${i.id}: [${i.isFolder ? "folder" : "file"}] ${i.name}`)
+          .join("\n");
+      }),
+  });
+
+  useWebMCP({
+    name: "open_folder",
+    description: "Open one of the folders currently shown on screen, by its exact name.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Exact name of a folder currently shown." },
+      },
+      required: ["name"],
+    },
+    execute: ({ name }: { name: string }) =>
+      runWebMCPTool("open_folder", () => {
+        const matches = folders.filter(
+          (f) => f.name.toLowerCase() === String(name).trim().toLowerCase(),
+        );
+        if (matches.length === 0) throw new Error("No folder with that name is currently shown.");
+        if (matches.length > 1) throw new Error("More than one shown folder has that name.");
+        open(matches[0]!);
+        return `Opened folder "${matches[0]!.name}".`;
+      }),
+  });
+
+  useWebMCP({
+    name: "star_paper",
+    description: "Add or remove a currently shown file in the user's Exam Bag (starred papers).",
+    enabled: !toggle.isPending,
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Exact name of a file currently shown." },
+        star: { type: "boolean", description: "true to add to the Exam Bag, false to remove." },
+      },
+      required: ["name", "star"],
+    },
+    execute: async ({ name, star }: { name: string; star: boolean }) =>
+      runWebMCPTool("star_paper", async () => {
+        const matches = files.filter(
+          (f) => f.name.toLowerCase() === String(name).trim().toLowerCase(),
+        );
+        if (matches.length === 0) throw new Error("No file with that name is currently shown.");
+        if (matches.length > 1) throw new Error("More than one shown file has that name.");
+        const file = matches[0]!;
+        const starred = starredIds.has(file.id);
+        if (star === starred) {
+          return star ? `"${file.name}" is already in the Exam Bag.` : `"${file.name}" is not in the Exam Bag.`;
+        }
+        await toggle.mutateAsync({ item: file, starred, folderPath });
+        return star ? `Added "${file.name}" to the Exam Bag.` : `Removed "${file.name}" from the Exam Bag.`;
+      }),
+  });
+
+  useWebMCP({
+    name: "toggle_exam_bag",
+    description: "Show or hide the My Exam Bag panel listing the user's starred papers.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        show: { type: "boolean", description: "true to show the Exam Bag, false to return to browsing." },
+      },
+      required: ["show"],
+    },
+    execute: ({ show }: { show: boolean }) =>
+      runWebMCPTool("toggle_exam_bag", () => {
+        setShowBag(Boolean(show));
+        return show ? "Exam Bag is now shown." : "Back to browsing.";
+      }),
+  });
 
   return (
     <div className="flex min-h-screen flex-col">
