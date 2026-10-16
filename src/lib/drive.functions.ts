@@ -159,28 +159,34 @@ export const listAllFiles = createServerFn({ method: "GET" })
     return { folderId: data.folderId, files };
   });
 
+// Plain helper usable from server functions and MCP tools alike.
+export async function listFolderItems(folderId: string): Promise<DriveItem[]> {
+  const items: DriveItem[] = [];
+  let pageToken: string | undefined;
+  do {
+    const params: Record<string, string> = {
+      q: `'${folderId}' in parents and trashed=false`,
+      fields:
+        "nextPageToken, files(id,name,mimeType,size,modifiedTime,webViewLink)",
+      pageSize: "200",
+      orderBy: "folder,name",
+      supportsAllDrives: "true",
+      includeItemsFromAllDrives: "true",
+    };
+    if (pageToken) params["pageToken"] = pageToken;
+    const json: any = await driveFetch("/files", params);
+    for (const f of json.files ?? []) items.push(toItem(f));
+    pageToken = json.nextPageToken;
+  } while (pageToken);
+  return items;
+}
+
 export const listFolder = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) =>
     z.object({ folderId: z.string().default(ROOT_FOLDER_ID) }).parse(data),
   )
   .handler(async ({ data }) => {
-    const items: DriveItem[] = [];
-    let pageToken: string | undefined;
-    do {
-      const params: Record<string, string> = {
-        q: `'${data.folderId}' in parents and trashed=false`,
-        fields:
-          "nextPageToken, files(id,name,mimeType,size,modifiedTime,webViewLink)",
-        pageSize: "200",
-        orderBy: "folder,name",
-        supportsAllDrives: "true",
-        includeItemsFromAllDrives: "true",
-      };
-      if (pageToken) params["pageToken"] = pageToken;
-      const json: any = await driveFetch("/files", params);
-      for (const f of json.files ?? []) items.push(toItem(f));
-      pageToken = json.nextPageToken;
-    } while (pageToken);
+    const items = await listFolderItems(data.folderId);
 
     let folderName = "All material";
     if (data.folderId !== ROOT_FOLDER_ID) {

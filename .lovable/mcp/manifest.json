@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "sdk_version": "3.1.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://lavmwzchajpbdznjiokw.supabase.co/auth/v1",
+    "require_oauth_client_claim": true,
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "shared-drive-viewer",
+      "version": "0.1.0",
+      "title": "Shared Drive Viewer"
+    },
+    "tools": [
+      {
+        "name": "browse_drive",
+        "title": "Browse drive folder",
+        "description": "List the folders and files inside a PaperLeak Google Drive folder. Omit folderId to list the top-level department folders.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "folderId": {
+              "description": "Google Drive folder ID to list. Omit for the root folder with all departments.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_starred_papers",
+        "title": "List starred papers",
+        "description": "List the question papers and files the signed-in user has saved to their Exam Bag in PaperLeak.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
