@@ -1,6 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { listFolder, ROOT_FOLDER_ID } from "@/lib/drive.functions";
+import { listFolderItems, ROOT_FOLDER_ID } from "@/lib/drive.functions";
 
 export default defineTool({
   name: "browse_drive",
@@ -15,7 +15,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
   handler: async ({ folderId }) => {
-    const items = await listFolder(folderId ?? ROOT_FOLDER_ID);
+    const items = await listFolderItems(folderId ?? ROOT_FOLDER_ID);
     const entries = items.map((item) => ({
       id: item.id,
       name: item.name,
